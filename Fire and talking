@@ -1,0 +1,134 @@
+#include <SD.h>
+#include <TMRpcm.h>
+#include <Servo.h>
+
+// Pin Definitions
+const int flameSensorPin = A0; // Flame sensor pin
+const int pumpPin = 6;         // Water pump control pin
+const int servoPin = 5;        // Servo motor control pin
+const int motorA1 = 7;         // Motor A control pins
+const int motorA2 = 8;
+const int motorB1 = 9;         // Motor B control pins
+const int motorB2 = 10;
+const int SD_ChipSelectPin = 4; // SD card module CS pin
+
+// Libraries and Variables
+TMRpcm audio;
+Servo servo;
+String command = "";
+int flameThreshold = 300; // Adjust based on flame sensor readings
+bool fireDetected = false;
+
+void setup() {
+    // Initialize serial communication
+    Serial.begin(9600);
+
+    // Initialize SD card and audio
+    audio.speakerPin = 11;
+    if (!SD.begin(SD_ChipSelectPin)) {
+        Serial.println("SD card initialization failed!");
+        return;
+    }
+
+    // Initialize pins
+    pinMode(flameSensorPin, INPUT);
+    pinMode(pumpPin, OUTPUT);
+    pinMode(motorA1, OUTPUT);
+    pinMode(motorA2, OUTPUT);
+    pinMode(motorB1, OUTPUT);
+    pinMode(motorB2, OUTPUT);
+
+    servo.attach(servoPin);
+    servo.write(90); // Default servo position
+    Serial.println("Robot Ready!");
+}
+
+void loop() {
+    // Check for fire detection
+    int flameValue = analogRead(flameSensorPin);
+    if (flameValue < flameThreshold) {
+        fireDetected = true;
+        Serial.println("Fire detected!");
+        audio.play("fire.wav"); // Play "Fire detected" audio
+        extinguishFire();
+    } else {
+        fireDetected = false;
+        stopMotors();
+    }
+
+    // Check for Bluetooth commands
+    if (Serial.available()) {
+        command = Serial.readStringUntil('\n');
+        processCommand(command);
+    }
+}
+
+// Function to extinguish fire
+void extinguishFire() {
+    moveForward();           // Move towards the fire
+    delay(2000);             // Adjust movement duration as needed
+    stopMotors();
+    audio.play("extinguish.wav"); // Play "Extinguishing fire" audio
+    servo.write(45);         // Adjust servo to aim at fire
+    digitalWrite(pumpPin, HIGH); // Activate water pump
+    delay(3000);             // Spray water for 3 seconds
+    digitalWrite(pumpPin, LOW);  // Stop water pump
+    servo.write(90);         // Reset servo position
+}
+
+// Function to process Bluetooth commands
+void processCommand(String cmd) {
+    if (cmd == "NAME") {
+        audio.play("name.wav"); // "My name is FireBot."
+    } else if (cmd == "JOB") {
+        audio.play("job.wav"); // "I am a firefighter and talking robot."
+    } else if (cmd == "STATUS") {
+        if (fireDetected) {
+            audio.play("fire.wav"); // "Fire detected."
+        } else {
+            audio.play("safe.wav"); // "All is safe."
+        }
+    } else if (cmd == "LOCATION") {
+        audio.play("location.wav"); // "I am located in the robotics lab."
+    } else if (cmd == "HELLO") {
+        audio.play("hello.wav"); // "Hello! How can I help you?"
+    } else if (cmd == "BANGLADESH") {
+        audio.play("bangladesh.wav"); // "Bangladesh is a country in South Asia."
+    } else if (cmd == "CAPITAL") {
+        audio.play("capital.wav"); // "The capital of Bangladesh is Dhaka."
+    } else if (cmd == "LANGUAGE") {
+        audio.play("language.wav"); // "The official language of Bangladesh is Bangla."
+    } else if (cmd == "RIVER") {
+        audio.play("river.wav"); // "Bangladesh is known for its rivers, especially the Padma and Jamuna."
+    } else if (cmd == "INDEPENDENCE") {
+        audio.play("independence.wav"); // "Bangladesh gained independence in 1971."
+    } else if (cmd == "CULTURE") {
+        audio.play("culture.wav"); // "Bangladesh has a rich culture including music, dance, and art."
+    } else if (cmd == "FOOD") {
+        audio.play("food.wav"); // "Bangladesh is famous for its delicious biryani and sweets like rasgulla."
+    } else {
+        audio.play("error.wav"); // Unknown command
+    }
+}
+
+// Motor control functions
+void moveForward() {
+    digitalWrite(motorA1, HIGH);
+    digitalWrite(motorA2, LOW);
+    digitalWrite(motorB1, HIGH);
+    digitalWrite(motorB2, LOW);
+}
+
+void moveBackward() {
+    digitalWrite(motorA1, LOW);
+    digitalWrite(motorA2, HIGH);
+    digitalWrite(motorB1, LOW);
+    digitalWrite(motorB2, HIGH);
+}
+
+void stopMotors() {
+    digitalWrite(motorA1, LOW);
+    digitalWrite(motorA2, LOW);
+    digitalWrite(motorB1, LOW);
+    digitalWrite(motorB2, LOW);
+}
